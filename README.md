@@ -1,116 +1,190 @@
-# Playwright tests - BCAS-OASIS UAT (Junior High School enrollment)
+# BCAS-OASIS Enrollment Testing (Junior High School)
 
-SQA Final Exam. Tests the **student enrollment form** and the **admin side** (School Years settings).
-Test names start with the **Test Case ID** from `SQA_Final_Exam_Enrollment_Testing.xlsx`.
+Automated and manual tests for the BCAS-OASIS UAT site (`https://uat.bcas-oasis.com`), prepared for the SQA Final Exam.
+
+The project covers two areas:
+
+- **Student side:** the Junior High School online enrollment form.
+- **Admin side:** login, School Years settings (upload settings, Lock and Unlock) and the application list.
+
+The automated tests are written in JavaScript with [Playwright Test](https://playwright.dev/docs/intro). Each test name begins with a Test Case ID (for example `TC-S13`) that matches the test case workbook in the `docs` folder.
 
 ---
 
-## 1. Setup (one time)
+## Group 3 (Junior High School)
 
-1. Install **Node.js** (LTS) and **VS Code**.
-2. Open this folder in VS Code, then open the Terminal and run:
+1. LIWANAG, JUSTINE VINCENT DE OCAMPO
+2. LONZAME, CARL JUSTIN LANDICHO
+3. MANALO, CHRISTOPER EVANGELISTA
+4. MENDOZA, NIÑO JUSTIN MANALO
+5. MORGADO, REYNIEL IVAN BABADILLA
+6. NAVARRO, ROMEL MILITSALA
 
-```
-npm install
-npx playwright install chromium
-```
+---
 
-3. Copy `.env.example` to `.env` and fill in:
-   - `ADMIN_USER` and `ADMIN_PASS` (from sir)
-   - `TEST_SCHOOL_YEAR` = **your own** JHS school year (see step 2)
+## 1. Scope
 
-> `.env` is in `.gitignore`. Never upload your password to GitHub.
-
-## 2. Make your OWN test school year (one time, by hand)
-
-Why: sir said our tests must be independent. If we lock or edit **JHS 2026-2027**, enrollment stops for every group.
-
-1. Login as admin, go to **School Years**, click **+ New**.
-2. Department = Junior High School, School Year = something nobody uses (example `2027-2028`), fill the required fields.
-3. Put the same school year in `.env` as `TEST_SCHOOL_YEAR`.
-4. Tell the other groups which school year is yours.
-
-The scripts **refuse to run** the admin tests if `TEST_SCHOOL_YEAR` is empty or equal to `2026-2027`.
-
-## 3. Run
-
-```
-npx playwright test                 # everything (headless)
-npx playwright test --headed        # see the browser
-npm run test:student                # student form only
-npm run test:admin                  # admin only
-npx playwright show-report          # open the HTML report
-```
-
-Screenshots of failed tests are saved automatically in the report.
-
-## 4. IMPORTANT: check the selectors first
-
-The scripts were written from screenshots, **before they could be run on the real site**. Field labels or button names may be a little different.
-
-If a test says *"locator not found"* or *"timeout"*:
-1. Run `npm run codegen` and click the field. Copy the label that codegen shows.
-2. Fix it in **`pages/selectors.js`** (student form) or **`pages/AdminPage.js`** (admin). You do not need to change the tests.
-3. Run that single test again: `npx playwright test -g "TC-S13"`
-
-Things most likely to need a small fix: the Save button name, the date field format, the Add Sibling button, the Unlock menu name, the Admissions menu link, the Delete confirmation button.
-
-### 4b. Real form structure (found Nov 15 with inspect-form.js)
-
-6 steps: 1 Enrollment Details (Department, Grade/Level, School Year, Type) > 2 Basic Student Information > 3 Relatives (+ Brothers and Sisters) > 4 School Last Attended > 5 Upload Documents > 6 Account Details > Submit.
-Steps 2-6 use the real `name` attributes (pages/selectors.js). Step 1 uses custom dropdowns, picked by their label in `EnrollmentFormPage.selectOption()`.
-Still UNVERIFIED: the date format of Birthdate (we type MM/DD/YYYY), the add-sibling form (so TC-S21 is `test.fixme`), the success message after Submit.
-If a dropdown or the sibling form still fails, run `node inspect-dom.js`, open the dropdown / sibling form in the browser, type a name in the terminal, and send the saved `inspect-dom-*.html` file.
-
-## 5. Failing tests are NOT always script errors
-
-A failed test is a question, not a verdict. These tests check the **correct** behavior, and the app currently accepts bad data, so these are expected to fail until the app is fixed:
-
-| Test | Defect |
+| In scope | Out of scope |
 |---|---|
-| TC-S07 birthdate today | DEF-001 |
-| TC-S10 numbers in first name | DEF-007 |
-| TC-S13 letters in contact number | DEF-004 |
-| TC-S14 contact number too short | DEF-005 |
-| TC-S15 LRN 8 digits | DEF-006 |
-| TC-S18 email without domain | DEF-008 |
-| TC-S21 negative sibling age | DEF-009 |
-| TC-S25 future graduation date | DEF-011 |
+| Junior High School enrollment form (all steps) | College, Senior High and Elementary enrollment |
+| Admin login, School Years settings, Lock and Unlock | Subject selection (College only) |
+| Application list and details (admin) | Performance and security testing |
 
-Each one has a `defect` tag in the HTML report. If one of them fails with *"locator not found"* instead of a wrong-behavior message, that is a selector problem (step 4), not the bug.
+The UAT site and the admin account are shared with other student groups. For this reason, every test is designed to be independent (see Section 6).
 
-## 5b. Admin tests that were written BEFORE exploring the screen
+---
 
-`admin-enrollment-period.spec.js` (TC-A19, TC-A20) uses **guessed labels**. If the label is not found the test is **skipped with a reason**, not failed. Do the exploratory charter EXP-05 (Excel, sheet Exploratory Testing) first, then fix `AdminPage.enrollmentPeriod()`.
+## 2. Prerequisites
 
-## 6. Independence rules (sir's instruction)
+- Node.js (LTS version)
+- Visual Studio Code (recommended)
+- The admin account credentials provided by the instructor
+- A dedicated test school year for Junior High School (see Section 3)
 
-- Every run makes a new unique name `TEST-xxxx`. Nothing is reused from an earlier run.
-- No test needs another test to run first.
-- Admin tests change **only** our own `TEST_SCHOOL_YEAR`, and put each setting back after the check.
-- After every admin test, the script checks that the shared **JHS 2026-2027** row is exactly the same as before.
-- If our own school year is missing or was Locked by someone else, the admin tests are **skipped with a reason** (they do not fail and look like app bugs).
-- After every admin test, our own school year row is also compared with how we found it.
-- `workers: 1` - one test at a time, because the UAT site is shared.
-- The admin password is only in `.env`.
-- The test only deletes the record with its own `TEST-` name. If a test fails in the middle, delete the leftover `TEST-` record by hand.
+---
 
-## 7. Files
+## 3. Setup
+
+1. Open the project folder (the folder that contains `package.json`) in a terminal and run:
+
+   ```
+   npm install
+   npx playwright install chromium
+   ```
+
+2. Copy `.env.example` to `.env` and fill in the values:
+
+   ```
+   BASE_URL=https://uat.bcas-oasis.com
+   ADMIN_USER=<admin username>
+   ADMIN_PASS=<admin password>
+   TEST_SCHOOL_YEAR=2027-2028
+   SHARED_SCHOOL_YEAR=2026-2027
+   ```
+
+   The `.env` file is excluded by `.gitignore`. Credentials must never be committed to the repository.
+
+3. Create a dedicated test school year (one time, manually):
+   - Log in as admin, open **School Years**, and select **+ New**.
+   - Choose Department = Junior High School and a school year that no other group uses (for example `2027-2028`).
+   - Enter the same value in `.env` as `TEST_SCHOOL_YEAR`.
+
+The admin tests refuse to run when `TEST_SCHOOL_YEAR` is empty or equal to the shared school year (`2026-2027`).
+
+---
+
+## 4. Running the tests
 
 ```
-playwright.config.js          settings (1 worker, screenshot on failure, HTML report)
-.env.example                  copy to .env
-helpers/env.js                reads .env + guard for the shared school year
-helpers/testData.js           unique TEST- data, fake files
-pages/selectors.js            labels of the student form (fix here)
-pages/EnrollmentFormPage.js   student form actions
-pages/AdminPage.js            admin actions (login, school years, lock, checkboxes)
-tests/enrollment-form.spec.js         student form checks
-tests/admin-school-year.spec.js       admin login + school year settings + lock
-tests/admin-enrollment-period.spec.js TC-A19, TC-A20 (own school year dates)
-tests/admin-applications.spec.js      student submits -> admin sees it -> cleanup
+npx playwright test                  # all tests (headless)
+npx playwright test --headed         # show the browser
+npm run test:student                 # student form only
+npm run test:admin                   # admin tests only
+npx playwright test -g "TC-S13"      # one test by its Test Case ID
+npx playwright show-report           # open the HTML report
 ```
 
-## 8. After running
+Screenshots of failed tests are captured automatically and appear in the HTML report.
 
-Write the results in the Excel file: **Execution Report > section G** (tests run, passed, failed) and update the **Status** / **Actual Result** in the Test Cases sheet.
+---
+
+## 5. Test results (executed November 15, 2026)
+
+| Spec file | Passed | Failed | Skipped |
+|---|---|---|---|
+| `tests/enrollment-form.spec.js` | 5 | 9 | 1 |
+| `tests/admin-school-year.spec.js` | 9 | 0 | 0 |
+| `tests/admin-enrollment-period.spec.js` | 0 | 0 | 2 |
+| `tests/admin-applications.spec.js` | 0 | 1 | 0 |
+| **Total (27 tests)** | **14** | **10** | **3** |
+
+### 5.1 Failed tests that confirm application defects
+
+These tests check the **expected** behavior. The application currently accepts invalid data, so the tests fail. Each failure is recorded in the Defect Log of the workbook.
+
+| Test | Expected behavior | Defect |
+|---|---|---|
+| TC-S07 | Birthdate of today is rejected | DEF-001 |
+| TC-S10 | Numbers in First Name are rejected | DEF-007 |
+| TC-S11 | Special characters in First Name are rejected | DEF-014 |
+| TC-S13 | Letters in Contact Number are rejected | DEF-004 |
+| TC-S14 | A very short Contact Number is rejected | DEF-005 |
+| TC-S15 | An LRN with fewer than 12 digits is rejected | DEF-006 |
+| TC-S18 | An email without a domain is rejected | DEF-008 |
+| TC-S25 | A graduation date in the future is rejected | DEF-011 |
+| TC-S28 | A `.txt` file in the document upload is rejected | DEF-015 |
+
+When one of these tests fails with "element not found" after clicking **Next**, the form has moved to the next step. This means the application accepted the invalid value.
+
+### 5.2 Known limitations
+
+- **TC-S30 / TC-A03 / TC-A04 / TC-A08** (`admin-applications.spec.js`): the end-to-end flow stops at the **Upload Documents** step. In the automated run, only two of the four documents kept their file. The same step worked in the manual run, so the cause (script or application) is not yet determined. It is recorded as an observation, not as a defect.
+- **TC-S21** (negative sibling age) is marked `test.fixme` because the add-sibling form has not been inspected yet.
+- **TC-A19 and TC-A20** (enrollment period dates) were skipped in automation and are covered by manual testing on the test school year only.
+
+---
+
+## 6. Test independence rules
+
+The UAT site is shared, so the tests follow these rules:
+
+- Every run creates new data with a unique `TEST-xxxx` name. Nothing is reused from an earlier run.
+- No test depends on another test.
+- Admin tests change **only** the school year in `TEST_SCHOOL_YEAR`, and every setting is restored after the check.
+- After each admin test, the shared Junior High School 2026-2027 row is compared with its original state to confirm it was not changed.
+- If the test school year is missing or locked by someone else, the admin tests are skipped with a reason instead of failing.
+- Tests run one at a time (`workers: 1`).
+- A test deletes only the record that carries its own `TEST-` name. If a test stops in the middle, the leftover `TEST-` record must be removed manually.
+- The admin password exists only in the local `.env` file.
+
+---
+
+## 7. Form structure (observed on the real site)
+
+The enrollment form has six steps:
+
+1. Enrollment Details (Department, Grade/Level, School Year, Type)
+2. Basic Student Information
+3. Relatives (including Brothers and Sisters)
+4. School Last Attended
+5. Upload Documents
+6. Account Details, then Submit
+
+Step 1 uses custom dropdowns, selected by their label in `EnrollmentFormPage.selectOption()`. Steps 2 to 6 use the real `name` attributes defined in `pages/selectors.js`.
+
+---
+
+## 8. Project structure
+
+```
+playwright.config.js                   Test settings (1 worker, screenshot on failure, HTML report)
+.env.example                           Template for the local .env file
+helpers/env.js                         Reads .env and protects the shared school year
+helpers/testData.js                    Unique TEST- data and sample files
+pages/selectors.js                     Field selectors of the student form
+pages/EnrollmentFormPage.js            Student form actions
+pages/AdminPage.js                     Admin actions (login, school years, lock, checkboxes)
+tests/enrollment-form.spec.js          Student form validation checks
+tests/admin-school-year.spec.js        Admin login, upload settings, Lock and Unlock
+tests/admin-enrollment-period.spec.js  Enrollment period checks (TC-A19, TC-A20)
+tests/admin-applications.spec.js       Submit an application and verify it in the admin list
+test-data/                             Sample files used for uploads
+evidence/                              Screenshots of defects and test runs
+docs/                                  Test plan, test cases, exploratory testing, defect log and execution report (Excel)
+```
+
+---
+
+## 9. Troubleshooting
+
+If a test reports "locator not found" or a timeout, the cause is usually a changed label or selector, not an application defect:
+
+1. Run `npm run codegen`, click the field, and copy the selector that is shown.
+2. Update it in `pages/selectors.js` (student form) or `pages/AdminPage.js` (admin).
+3. Run the single test again with `npx playwright test -g "<Test Case ID>"`.
+
+---
+
+## 10. Documents
+
+All test documentation is in the `docs` folder: the test plan, manual test cases, exploratory testing charters, the defect log, and the execution report. After each run, update the **Execution Report** (section G) and the **Status** and **Actual Result** columns of the Test Cases sheet.
