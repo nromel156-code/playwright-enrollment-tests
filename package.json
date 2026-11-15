@@ -1,0 +1,17 @@
+{
+  "name": "playwright-enrollment-tests",
+  "version": "1.0.0",
+  "description": "SQA final exam - Playwright tests for BCAS-OASIS UAT (Junior High School enrollment + admin school year settings)",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:student": "playwright test tests/enrollment-form.spec.js",
+    "test:admin": "playwright test tests/admin-school-year.spec.js tests/admin-enrollment-period.spec.js tests/admin-applications.spec.js",
+    "codegen": "playwright codegen https://uat.bcas-oasis.com/enrollment/form",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "dotenv": "^16.4.5"
+  }
+}
